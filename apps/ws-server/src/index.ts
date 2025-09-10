@@ -6,6 +6,8 @@ import {config} from "@repo/config/config";
 
 import {prismaClient} from "@repo/db/client";
 
+import {pub , sub} from "./redis";
+
 const wss = new WebSocketServer({port : config.WS_PORT})
 type User = {
     ws : WebSocket,
@@ -75,10 +77,10 @@ wss.on('connection' , function connection(ws,req){
             users.forEach(user=>{
                 if(user.rooms.includes(roomId)){
                     user.ws.send(JSON.stringify({
-                        type : "chat",
-                        message,
-                        userId,
-                        roomId
+                        
+                        type: "chat",
+                        message: message,
+                        userId: roomId
                     }));
                 }
             });

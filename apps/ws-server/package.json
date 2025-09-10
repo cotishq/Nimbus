@@ -19,10 +19,10 @@
     "@repo/typescript-config": "workspace:*",
     "@repo/config": "workspace:*",
     "@repo/db": "workspace:*"
-
   },
   "dependencies": {
     "@types/ws": "^8.18.1",
+    "ioredis": "^5.7.0",
     "ws": "^8.18.3"
   }
 }
