@@ -6,9 +6,9 @@ import {config} from "@repo/config/config";
 
 import {prismaClient} from "@repo/db/client";
 
-import {pub , sub} from "./redis";
+import { pub , sub } from "./redis.js";
 
-const wss = new WebSocketServer({port : config.WS_PORT})
+const wss = new WebSocketServer({port : config.WS_PORT}) 
 type User = {
     ws : WebSocket,
     rooms : string[],
@@ -26,7 +26,28 @@ const checkUser = (token : string) : string | null => {
     catch(e){
         return null;
     }
-}
+};
+
+sub.subscribe("chat_message", (err , count) => {
+    if(err){
+        console.error("Failed to subscribe" , err.message);
+    }
+    else{
+        console.log(`Subscribed to ${count} channel(s).`);
+    }
+})
+
+sub.on("message" , (channel , message) => {
+    if(channel === "chat_message"){
+        const data = JSON.parse(message);
+
+        users.forEach((user) => {
+            if(user.rooms.includes(data.roomId)){
+                user.ws.send(JSON.stringify(data));
+            }
+        })
+    }
+});
 
 wss.on('connection' , function connection(ws,req){
     const url = req.url;
@@ -74,16 +95,16 @@ wss.on('connection' , function connection(ws,req){
                     userId
                 }
             });
-            users.forEach(user=>{
-                if(user.rooms.includes(roomId)){
-                    user.ws.send(JSON.stringify({
-                        
-                        type: "chat",
-                        message: message,
-                        userId: roomId
-                    }));
-                }
-            });
+
+            await pub.publish(
+                "chat_messages",
+                JSON.stringify({
+                    type: "chat",
+                    message ,
+                    userId,
+                    roomId
+                })
+            )
         }
     } )
 })
