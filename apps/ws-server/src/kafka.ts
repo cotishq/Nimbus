@@ -1,4 +1,6 @@
-import { Kafka, Producer } from "kafkajs";
+import { prismaClient } from "@repo/db/client";
+import { Kafka, Producer , Consumer, KafkaJSAggregateError } from "kafkajs";
+
 
 
 
@@ -16,4 +18,55 @@ export async function getKafkaProducer() {
     console.log("Kafka producer connected");
     return producer;
     
+}
+
+export async function sendMessageToKafka(message : any, topic: string){
+    const producer = await getKafkaProducer();
+    await producer.send({
+        topic,
+        messages: [{value : JSON.stringify(message)}],
+    })
+}
+
+let consumer : Consumer | null = null;
+
+export async function KafkaConsumer(){
+    if(consumer) return consumer;
+
+    consumer = kafka.consumer({groupId: "chat-group"});
+
+    try{
+        await consumer.connect();
+        await consumer.subscribe({topic : "messages" , fromBeginning : false} ,);
+
+        await consumer.run({
+            autoCommit : true,
+            eachMessage : async({topic , partition , message}) => {
+                if(!message.value) return;
+
+                const value = message.value.toString();
+                console.log(`Consumed from kafka[${topic}] : ${value}`);
+
+                try{
+                    const messageData = JSON.parse(value);
+                    await prismaClient.chat.create({
+                        data: {
+                            message: messageData.message,
+                            roomId: messageData.roomId,
+                            userId: messageData.userId
+                        },
+
+                    });
+                    console.log("Message persisited to db");
+                } catch (dbErr){
+                    console.log("failed to persist message : " , dbErr);
+                }
+            }
+        });
+        console.log("kafka consumer connected");
+    
+    } catch (err){
+        console.log("failed to connect to kafka : " , err);
+    }
+    return consumer;
 }
