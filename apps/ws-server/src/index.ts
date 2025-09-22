@@ -3,6 +3,7 @@ import jwt from "jsonwebtoken";
 import { config } from "@repo/config/config";
 import { pub, sub } from "./redis.js";
 import { sendMessageToKafka, KafkaConsumer } from "./kafka.js";
+import { prismaClient } from "@repo/db/client";
 
 // Types
 interface User {
@@ -29,11 +30,38 @@ interface LeaveRoomMessage {
   roomId: string;
 }
 
-type WebSocketMessage = ChatMessage | JoinRoomMessage | LeaveRoomMessage;
+interface TypingMessage {
+  type: "typing";
+  roomId: string;
+  isTyping: boolean;
+}
+
+interface ReactionMessage {
+  type: "reaction";
+  messageId: number;
+  emoji: string;
+  roomId: string;
+}
+
+interface EditMessage {
+  type: "edit_message";
+  messageId: number;
+  newMessage: string;
+  roomId: string;
+}
+
+interface DeleteMessage {
+  type: "delete_message";
+  messageId: number;
+  roomId: string;
+}
+
+type WebSocketMessage = ChatMessage | JoinRoomMessage | LeaveRoomMessage | TypingMessage | ReactionMessage | EditMessage | DeleteMessage;
 
 // State Management
 const connectedUsers = new Map<string, User>();
 const roomSubscriptions = new Map<string, number>();
+const typingUsers = new Map<string, Map<string, { userId: string; name: string; timestamp: number }>>();
 
 // WebSocket Server
 const wss = new WebSocketServer({ port: config.WS_PORT });
@@ -145,6 +173,119 @@ const handleChatMessage = async (user: User, message: ChatMessage) => {
   }
 };
 
+const handleTyping = (user: User, message: TypingMessage) => {
+  const channel = getRoomChannel(message.roomId);
+  
+  if (!user.rooms.has(channel)) return;
+  
+  const roomTyping = typingUsers.get(message.roomId) || new Map();
+  
+  if (message.isTyping) {
+    roomTyping.set(user.id, {
+      userId: user.id,
+      name: user.id, // You might want to fetch actual name from DB
+      timestamp: Date.now()
+    });
+  } else {
+    roomTyping.delete(user.id);
+  }
+  
+  typingUsers.set(message.roomId, roomTyping);
+  
+  // Broadcast typing status to room
+  const typingData = {
+    type: "typing_update",
+    roomId: message.roomId,
+    typingUsers: Array.from(roomTyping.values()).filter(t => 
+      Date.now() - t.timestamp < 3000 // Remove old typing indicators
+    )
+  };
+  
+  connectedUsers.forEach(u => {
+    if (u.rooms.has(channel) && u.ws.readyState === WebSocket.OPEN) {
+      u.ws.send(JSON.stringify(typingData));
+    }
+  });
+};
+
+const handleReaction = async (user: User, message: ReactionMessage) => {
+  const channel = getRoomChannel(message.roomId);
+  
+  if (!user.rooms.has(channel)) return;
+  
+  const reactionData = {
+    ...message,
+    userId: user.id,
+    timestamp: Date.now()
+  };
+  
+  // Send to Kafka for persistence
+  try {
+    await sendMessageToKafka(reactionData, "reactions");
+  } catch (error) {
+    console.error("Failed to send reaction to Kafka:", error);
+  }
+  
+  // Broadcast to Redis
+  try {
+    await pub.publish(channel, JSON.stringify(reactionData));
+  } catch (error) {
+    console.error("Failed to publish reaction to Redis:", error);
+  }
+};
+
+const handleEditMessage = async (user: User, message: EditMessage) => {
+  const channel = getRoomChannel(message.roomId);
+  
+  if (!user.rooms.has(channel)) return;
+  
+  const editData = {
+    ...message,
+    userId: user.id,
+    timestamp: Date.now()
+  };
+  
+  // Send to Kafka for persistence
+  try {
+    await sendMessageToKafka(editData, "message_edits");
+  } catch (error) {
+    console.error("Failed to send edit to Kafka:", error);
+  }
+  
+  // Broadcast to Redis
+  try {
+    await pub.publish(channel, JSON.stringify(editData));
+  } catch (error) {
+    console.error("Failed to publish edit to Redis:", error);
+  }
+};
+
+const handleDeleteMessage = async (user: User, message: DeleteMessage) => {
+  const channel = getRoomChannel(message.roomId);
+  
+  if (!user.rooms.has(channel)) return;
+  
+  const deleteData = {
+    ...message,
+    userId: user.id,
+    timestamp: Date.now()
+  };
+  
+  // Send to Kafka for persistence
+  try {
+    await sendMessageToKafka(deleteData, "message_deletes");
+  } catch (error) {
+    console.error("Failed to send delete to Kafka:", error);
+  }
+  
+  // Broadcast to Redis
+  try {
+    await pub.publish(channel, JSON.stringify(deleteData));
+  } catch (error) {
+    console.error("Failed to publish delete to Redis:", error);
+  }
+};
+
 // Connection Handler
 wss.on("connection", (ws, req) => {
   const url = new URL(req.url || "", `http://${req.headers.host}`);
@@ -171,6 +312,16 @@ wss.on("connection", (ws, req) => {
   connectedUsers.set(userId, user);
   console.log(`User ${userId} connected`);
   
+  // Update online status
+  try {
+    await prismaClient.user.update({
+      where: { id: userId },
+      data: { isOnline: true, lastSeen: new Date() }
+    });
+  } catch (error) {
+    console.error("Failed to update user online status:", error);
+  }
+  
   // Message Handler
   ws.on("message", async (data) => {
     try {
@@ -187,6 +338,22 @@ wss.on("connection", (ws, req) => {
           
         case "chat":
           await handleChatMessage(user, message);
+          break;
+          
+        case "typing":
+          handleTyping(user, message);
+          break;
+          
+        case "reaction":
+          await handleReaction(user, message);
+          break;
+          
+        case "edit_message":
+          await handleEditMessage(user, message);
+          break;
+          
+        case "delete_message":
+          await handleDeleteMessage(user, message);
           break;
           
         default:
@@ -208,11 +375,29 @@ wss.on("connection", (ws, req) => {
   ws.on("close", async () => {
     console.log(`User ${userId} disconnected`);
     
+    // Update offline status
+    try {
+      await prismaClient.user.update({
+        where: { id: userId },
+        data: { isOnline: false, lastSeen: new Date() }
+      });
+    } catch (error) {
+      console.error("Failed to update user offline status:", error);
+    }
+    
     // Leave all rooms
     for (const channel of user.rooms) {
       const roomId = channel.replace("room:", "");
       await leaveRoom(user, roomId);
     }
+    
+    // Clean up typing indicators
+    typingUsers.forEach((roomTyping, roomId) => {
+      roomTyping.delete(userId);
+      if (roomTyping.size === 0) {
+        typingUsers.delete(roomId);
+      }
+    });
     
     connectedUsers.delete(userId);
   });

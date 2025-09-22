@@ -15,30 +15,49 @@ datasource db {
 }
 
 model User{
-  id     String  @id @default(uuid())
-  email  String  @unique
-  password String 
-  name     String
-  rooms    Room[]
-  chats    Chat[]
-  
+  id        String     @id @default(uuid())
+  email     String     @unique
+  password  String     
+  name      String
+  rooms     Room[]
+  chats     Chat[]
+  reactions Reaction[]
+  lastSeen  DateTime   @default(now())
+  isOnline  Boolean    @default(false)
 }
 
 model Room{
-  id     Int    @id @default(autoincrement())
-  slug   String  @unique
+  id        Int      @id @default(autoincrement())
+  slug      String   @unique
+  name      String?
   createdAt DateTime @default(now())
   adminId   String
-  admin     User   @relation(fields: [adminId] , references: [id])
+  admin     User     @relation(fields: [adminId], references: [id])
   chats     Chat[]
-  
+  isPrivate Boolean  @default(false)
 }
 
 model Chat {
-  id     Int   @id @default(autoincrement())
-  roomId  Int
-  message String
-  userId  String
-  user    User    @relation(fields: [userId] , references: [id])
-  room    Room    @relation(fields: [roomId] , references: [id])
+  id        Int      @id @default(autoincrement())
+  roomId    Int
+  message   String
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  room      Room     @relation(fields: [roomId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  edited    Boolean  @default(false)
+  reactions Json?
+}
+
+model Reaction {
+  id        Int      @id @default(autoincrement())
+  messageId Int
+  userId    String
+  emoji     String
+  message   Chat     @relation(fields: [messageId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  
+  @@unique([messageId, userId, emoji])
 }

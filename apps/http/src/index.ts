@@ -167,6 +167,160 @@ app.get("/room/:slug", middleware, async(req, res)=>{
     }
 })
 
+// Get online users in a room
+app.get("/rooms/:roomId/users", middleware, async(req, res)=>{
+    const roomId = Number(req.params.roomId);
+    try{
+        const onlineUsers = await prismaClient.user.findMany({
+            where: {
+                isOnline: true,
+                chats: {
+                    some: {
+                        roomId: roomId
+                    }
+                }
+            },
+            select: {
+                id: true,
+                name: true,
+                lastSeen: true
+            }
+        });
+        res.json({
+            onlineUsers
+        })
+    }catch(e){
+        res.status(411).json({
+            message: "Error getting online users"
+        })
+    }
+})
+
+// Edit message
+app.put("/messages/:messageId", middleware, async(req, res)=>{
+    const messageId = Number(req.params.messageId);
+    const userId = req.userId;
+    const { newMessage } = req.body;
+    
+    try{
+        const message = await prismaClient.chat.findFirst({
+            where: { id: messageId }
+        });
+        
+        if(!message || message.userId !== userId){
+            return res.status(403).json({
+                message: "Unauthorized to edit this message"
+            });
+        }
+        
+        const updatedMessage = await prismaClient.chat.update({
+            where: { id: messageId },
+            data: {
+                message: newMessage,
+                edited: true
+            }
+        });
+        
+        res.json({
+            message: updatedMessage
+        });
+    }catch(e){
+        res.status(411).json({
+            message: "Error editing message"
+        })
+    }
+})
+
+// Delete message
+app.delete("/messages/:messageId", middleware, async(req, res)=>{
+    const messageId = Number(req.params.messageId);
+    const userId = req.userId;
+    
+    try{
+        const message = await prismaClient.chat.findFirst({
+            where: { id: messageId }
+        });
+        
+        if(!message || message.userId !== userId){
+            return res.status(403).json({
+                message: "Unauthorized to delete this message"
+            });
+        }
+        
+        await prismaClient.chat.delete({
+            where: { id: messageId }
+        });
+        
+        res.json({
+            message: "Message deleted successfully"
+        });
+    }catch(e){
+        res.status(411).json({
+            message: "Error deleting message"
+        })
+    }
+})
+
+// Add reaction to message
+app.post("/messages/:messageId/reactions", middleware, async(req, res)=>{
+    const messageId = Number(req.params.messageId);
+    const userId = req.userId;
+    const { emoji } = req.body;
+    
+    try{
+        const reaction = await prismaClient.reaction.upsert({
+            where: {
+                messageId_userId_emoji: {
+                    messageId,
+                    userId,
+                    emoji
+                }
+            },
+            update: {
+                createdAt: new Date()
+            },
+            create: {
+                messageId,
+                userId,
+                emoji
+            }
+        });
+        
+        res.json({
+            reaction
+        });
+    }catch(e){
+        res.status(411).json({
+            message: "Error adding reaction"
+        })
+    }
+})
+
+// Remove reaction from message
+app.delete("/messages/:messageId/reactions", middleware, async(req, res)=>{
+    const messageId = Number(req.params.messageId);
+    const userId = req.userId;
+    const { emoji } = req.body;
+    
+    try{
+        await prismaClient.reaction.deleteMany({
+            where: {
+                messageId,
+                userId,
+                emoji
+            }
+        });
+        
+        res.json({
+            message: "Reaction removed successfully"
+        });
+    }catch(e){
+        res.status(411).json({
+            message: "Error removing reaction"
+        })
+    }
+})
+
 
 
 
