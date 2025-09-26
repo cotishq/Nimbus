@@ -5,6 +5,7 @@ import { Kafka, Producer , Consumer, KafkaJSAggregateError } from "kafkajs";
 
 
 const kafka = new Kafka({
+    
     clientId: "ws-server",
     brokers : [process.env.KAFKA_BROKER || "localhost:9092"],
 });
