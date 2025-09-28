@@ -287,7 +287,7 @@ const handleDeleteMessage = async (user: User, message: DeleteMessage) => {
 };
 
 // Connection Handler
-wss.on("connection", (ws, req) => {
+wss.on("connection", async (ws, req) => {
   const url = new URL(req.url || "", `http://${req.headers.host}`);
   const token = url.searchParams.get("token");
   
