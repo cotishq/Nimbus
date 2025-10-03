@@ -400,6 +400,7 @@ wss.on("connection", async (ws, req) => {
     });
     
     connectedUsers.delete(userId);
+    console.log(`User ${userId} disconnected`);
   });
   
   // Send welcome message
