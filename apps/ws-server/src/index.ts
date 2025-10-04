@@ -397,6 +397,7 @@ wss.on("connection", async (ws, req) => {
       if (roomTyping.size === 0) {
         typingUsers.delete(roomId);
       }
+      console.log(`Typing user ${userId} left room ${roomId}`);
     });
     
     connectedUsers.delete(userId);
@@ -407,6 +408,7 @@ wss.on("connection", async (ws, req) => {
   ws.send(JSON.stringify({ 
     type: "connected", 
     message: "Connected to chat server" 
+
   }));
 });
 
