@@ -407,7 +407,8 @@ wss.on("connection", async (ws, req) => {
   // Send welcome message
   ws.send(JSON.stringify({ 
     type: "connected", 
-    message: "Connected to chat server" 
+    message: "Connected to chat server",
+    userId: userId
 
   }));
 });
