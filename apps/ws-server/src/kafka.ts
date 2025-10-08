@@ -26,6 +26,7 @@ export async function sendMessageToKafka(message : any, topic: string){
     await producer.send({
         topic,
         messages: [{value : JSON.stringify(message)}],
+
     })
 }
 
@@ -37,8 +38,10 @@ export async function KafkaConsumer(){
     consumer = kafka.consumer({groupId: "chat-group"});
 
     try{
+
         await consumer.connect();
         await consumer.subscribe({topic : "messages" , fromBeginning : false} ,);
+        await consumer.subscribe({topic : "reactions" , fromBeginning : false} ,);
 
         await consumer.run({
             autoCommit : true,
