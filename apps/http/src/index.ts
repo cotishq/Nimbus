@@ -5,7 +5,7 @@ import {prismaClient} from "@repo/db/client"
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { config } from "@repo/config/config";
-import { CustomRequest, middleware } from "./middleware.js";
+import { CustomRequest, middleware } from "./middleware";
 
 
 
@@ -126,7 +126,7 @@ app.post("/rooms" , middleware ,  async (req : CustomRequest , res) => {
 
 })
 
-app.get("/chats/:roomId" , middleware , async(req , res) => {
+app.get("/chats/:roomId" , middleware , async(req: CustomRequest , res) => {
     try{
         const roomId = Number(req.params.roomId);
     const messages = await prismaClient.chat.findMany({
@@ -151,7 +151,7 @@ app.get("/chats/:roomId" , middleware , async(req , res) => {
 }
 )
 
-app.get("/room/:slug", middleware, async(req, res)=>{
+app.get("/room/:slug", middleware, async(req: CustomRequest, res)=>{
     const slug=req.params.slug;
     try{
         const room= await prismaClient.room.findFirst({
@@ -168,7 +168,7 @@ app.get("/room/:slug", middleware, async(req, res)=>{
 })
 
 // Get online users in a room
-app.get("/rooms/:roomId/users", middleware, async(req, res)=>{
+app.get("/rooms/:roomId/users", middleware, async(req: CustomRequest, res)=>{
     const roomId = Number(req.params.roomId);
     try{
         const onlineUsers = await prismaClient.user.findMany({
@@ -197,7 +197,7 @@ app.get("/rooms/:roomId/users", middleware, async(req, res)=>{
 })
 
 // Edit message
-app.put("/messages/:messageId", middleware, async(req, res)=>{
+app.put("/messages/:messageId", middleware, async(req: CustomRequest, res)=>{
     const messageId = Number(req.params.messageId);
     const userId = req.userId;
     const { newMessage } = req.body;
@@ -232,7 +232,7 @@ app.put("/messages/:messageId", middleware, async(req, res)=>{
 })
 
 // Delete message
-app.delete("/messages/:messageId", middleware, async(req, res)=>{
+app.delete("/messages/:messageId", middleware, async(req: CustomRequest, res)=>{
     const messageId = Number(req.params.messageId);
     const userId = req.userId;
     
@@ -262,7 +262,7 @@ app.delete("/messages/:messageId", middleware, async(req, res)=>{
 })
 
 // Add reaction to message
-app.post("/messages/:messageId/reactions", middleware, async(req, res)=>{
+app.post("/messages/:messageId/reactions", middleware, async(req: CustomRequest, res)=>{
     const messageId = Number(req.params.messageId);
     const userId = req.userId;
     const { emoji } = req.body;
@@ -297,7 +297,7 @@ app.post("/messages/:messageId/reactions", middleware, async(req, res)=>{
 })
 
 // Remove reaction from message
-app.delete("/messages/:messageId/reactions", middleware, async(req, res)=>{
+app.delete("/messages/:messageId/reactions", middleware, async(req: CustomRequest, res)=>{
     const messageId = Number(req.params.messageId);
     const userId = req.userId;
     const { emoji } = req.body;
