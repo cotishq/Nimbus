@@ -5,7 +5,7 @@ import {prismaClient} from "@repo/db/client"
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { config } from "@repo/config/config";
-import { CustomRequest, middleware } from "./middleware";
+import { CustomRequest, middleware } from "./middleware.js";
 
 
 
@@ -265,6 +265,11 @@ app.delete("/messages/:messageId", middleware, async(req: CustomRequest, res)=>{
 app.post("/messages/:messageId/reactions", middleware, async(req: CustomRequest, res)=>{
     const messageId = Number(req.params.messageId);
     const userId = req.userId;
+    if(!userId){
+        return res.status(403).json({
+            message: "Unauthorized"
+        });
+    }
     const { emoji } = req.body;
     
     try{
