@@ -304,9 +304,11 @@ app.delete("/messages/:messageId/reactions", middleware, async(req: CustomReques
     
     try{
         await prismaClient.reaction.deleteMany({
+
             where: {
                 messageId,
                 userId,
+                
                 emoji
             }
         });
