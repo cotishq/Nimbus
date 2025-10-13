@@ -388,6 +388,7 @@ wss.on("connection", async (ws, req) => {
     // Leave all rooms
     for (const channel of user.rooms) {
       const roomId = channel.replace("room:", "");
+      console.log(`User ${userId} left room ${roomId}`);
       await leaveRoom(user, roomId);
     }
     

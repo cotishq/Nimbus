@@ -313,7 +313,6 @@ app.delete("/messages/:messageId/reactions", middleware, async(req: CustomReques
             where: {
                 messageId,
                 userId,
-                
                 emoji
             }
         });
