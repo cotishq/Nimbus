@@ -63,7 +63,7 @@ app.post("/signin" , async (req , res) => {
         })
         if(!user || !user.password){
             res.status(401).json({
-                message : "user not found , invalid"
+                message : "user not found , invalid credentials"
             })
             return;
         }
