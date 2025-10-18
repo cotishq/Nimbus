@@ -177,6 +177,7 @@ const handleTyping = (user: User, message: TypingMessage) => {
   const channel = getRoomChannel(message.roomId);
   
   if (!user.rooms.has(channel)) return;
+  console.log(`User ${user.id} is ${message.isTyping ? "typing" : "not typing"} in room ${message.roomId}`);
   
   const roomTyping = typingUsers.get(message.roomId) || new Map();
   
