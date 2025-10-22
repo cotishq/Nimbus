@@ -22,12 +22,15 @@ export async function getKafkaProducer() {
 }
 
 export async function sendMessageToKafka(message : any, topic: string){
-    const producer = await getKafkaProducer();
-    await producer.send({
-        topic,
-        messages: [{value : JSON.stringify(message)}],
-
-    })
+    try{
+        const producer = await getKafkaProducer();
+        await producer.send({
+            topic,
+            messages: [{value : JSON.stringify(message)}],
+        })
+    } catch (err){
+        console.log("failed to send message to kafka : " , err);
+    }
 }
 
 let consumer : Consumer | null = null;
