@@ -419,7 +419,7 @@ wss.on("connection", async (ws, req) => {
 KafkaConsumer().catch(console.error);
 
 // Server startup
-console.log(`🚀 WebSocket server running on ws://localhost:${config.WS_PORT}`);
+console.log(`WebSocket server running on ws://localhost:${config.WS_PORT}`);
 
 // Graceful shutdown
 process.on("SIGTERM", async () => {
