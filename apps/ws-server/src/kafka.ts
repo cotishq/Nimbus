@@ -1,5 +1,5 @@
 import { prismaClient } from "@repo/db/client";
-import { Kafka, Producer , Consumer, KafkaJSAggregateError } from "kafkajs";
+import { Kafka, Producer , Consumer} from "kafkajs";
 
 
 
