@@ -24,6 +24,10 @@ export async function getKafkaProducer() {
 export async function sendMessageToKafka(message : any, topic: string){
     try{
         const producer = await getKafkaProducer();
+        if(!producer) {
+            console.log("failed to get kafka producer");
+            return;
+        }
         await producer.send({
             topic,
             messages: [{value : JSON.stringify(message)}],
