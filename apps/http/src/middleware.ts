@@ -7,6 +7,7 @@ export interface CustomRequest extends Request{
 }
 
 export const middleware=(req : CustomRequest , res : Response , next : NextFunction) => {
+
     const token = req.headers.authorization;
     if(!token){
         res.status(401).json({
@@ -15,6 +16,7 @@ export const middleware=(req : CustomRequest , res : Response , next : NextFunct
         return;
     }
     const decoded = jwt.verify(token , config.SECRET_KEY) as CustomRequest;
+    console.log(decoded);
     if(decoded){
         req.userId = decoded.userId;
         next();
@@ -22,6 +24,7 @@ export const middleware=(req : CustomRequest , res : Response , next : NextFunct
     else{
         res.status(403).json({
             message : "Unauthorized"
+
         })
     }
 }
