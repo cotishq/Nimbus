@@ -16,16 +16,8 @@ export const middleware=(req : CustomRequest , res : Response , next : NextFunct
         return;
     }
     const decoded = jwt.verify(token , config.SECRET_KEY) as CustomRequest;
-    console.log(decoded);
-    if(decoded){
-        req.userId = decoded.userId;
-        next();
-    }
-    else{
-        res.status(403).json({
-            message : "Unauthorized"
-
-        })
-    }
+    console.log("decoded",decoded);
+    req.userId = decoded.userId;
+    next();
 }
 
