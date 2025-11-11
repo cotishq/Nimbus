@@ -304,6 +304,11 @@ app.post("/messages/:messageId/reactions", middleware, async(req: CustomRequest,
 // Remove reaction from message
 app.delete("/messages/:messageId/reactions", middleware, async(req: CustomRequest, res)=>{
     const messageId = Number(req.params.messageId);
+    if(!messageId){
+        return res.status(400).json({
+            message: "Message ID is required"
+        });
+    }
     const userId = req.userId;
     const { emoji } = req.body;
     
@@ -314,11 +319,13 @@ app.delete("/messages/:messageId/reactions", middleware, async(req: CustomReques
                 messageId,
                 userId,
                 emoji
+               
             }
         });
         
         res.json({
             message: "Reaction removed successfully"
+            ,
         });
     }catch(e){
         res.status(411).json({
